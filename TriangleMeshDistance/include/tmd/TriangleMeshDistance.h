@@ -270,6 +270,11 @@ inline tmd::Result tmd::TriangleMeshDistance::unsigned_distance(const Eigen::Vec
 
 inline void tmd::TriangleMeshDistance::_construct()
 {
+	if (this->triangles.size() == 0) {
+		std::cout << "DistanceTriangleMesh error: Empty triangle list." << std::endl;
+		exit(-1);
+	}
+	
 	// Build the tree containing the triangles
 	std::vector<Triangle> triangles;
 
