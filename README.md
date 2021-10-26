@@ -25,6 +25,7 @@ std::cout << "Nearest triangle index: " << result.triangle_id << std::endl;
 ```
 
 
+
 ## What you need to know about TriangleMeshDistance
 - `TriangleMeshDistance` keeps a copy of the vertex and triangle data passed as input.
 - Additionally, the pseudonormals required to compute signed distances are calculated and stored at building time.
