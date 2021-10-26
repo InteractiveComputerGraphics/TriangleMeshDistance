@@ -189,28 +189,17 @@ inline void tmd::TriangleMeshDistance::construct(const FLOAT* vertices, const SI
 template<typename IndexableVector3double, typename IndexableVector3int>
 inline void tmd::TriangleMeshDistance::construct(const std::vector<IndexableVector3double>& vertices, const std::vector<IndexableVector3int>& triangles)
 {
-	if constexpr (std::is_same<IndexableVector3double, Eigen::Vector3d>::value) {
-		this->vertices = vertices;
+	this->vertices.resize(vertices.size());
+	for (size_t i = 0; i < vertices.size(); i++) {
+		this->vertices[i][0] = (double)vertices[i][0];
+		this->vertices[i][1] = (double)vertices[i][1];
+		this->vertices[i][2] = (double)vertices[i][2];
 	}
-	else {
-		this->vertices.resize(vertices.size());
-		for (size_t i = 0; i < vertices.size(); i++) {
-			this->vertices[i][0] = (double)vertices[i][0];
-			this->vertices[i][1] = (double)vertices[i][1];
-			this->vertices[i][2] = (double)vertices[i][2];
-		}
-	}
-
-	if constexpr (std::is_same<IndexableVector3int, std::array<int, 3>>::value) {
-		this->triangles = triangles;
-	}
-	else {
-		this->triangles.resize(triangles.size());
-		for (size_t i = 0; i < triangles.size(); i++) {
-			this->triangles[i][0] = (int)triangles[i][0];
-			this->triangles[i][1] = (int)triangles[i][1];
-			this->triangles[i][2] = (int)triangles[i][2];
-		}
+	this->triangles.resize(triangles.size());
+	for (size_t i = 0; i < triangles.size(); i++) {
+		this->triangles[i][0] = (int)triangles[i][0];
+		this->triangles[i][1] = (int)triangles[i][1];
+		this->triangles[i][2] = (int)triangles[i][2];
 	}
 	this->_construct();
 }
