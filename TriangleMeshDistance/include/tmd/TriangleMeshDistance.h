@@ -177,7 +177,9 @@ namespace tmd
 		 * 
 		 * @return Result containing distance, nearest point on the mesh, nearest entity and the nearest triangle index.
 		*/
-		Result unsigned_distance(const Vec3d &point) const;
+		template<typename IndexableVector3double>
+		Result unsigned_distance(const IndexableVector3double& point) const;
+		Result unsigned_distance(const std::array<double, 3>& point) const;
 
 		/**
 		 * @brief Computes the unsigned distance from a point to the triangle mesh. Thread safe.
@@ -186,7 +188,9 @@ namespace tmd
 		 * 
 		 * @return Result containing distance, nearest point on the mesh, nearest entity and the nearest triangle index.
 		*/
-		Result signed_distance(const Vec3d& point) const;
+		template<typename IndexableVector3double>
+		Result signed_distance(const IndexableVector3double& point) const;
+		Result signed_distance(const std::array<double, 3>& point) const;
 	};
 }
 
@@ -243,9 +247,10 @@ inline void tmd::TriangleMeshDistance::construct(const std::vector<IndexableVect
 	this->_construct();
 }
 
-inline tmd::Result tmd::TriangleMeshDistance::signed_distance(const Vec3d& point) const
+inline tmd::Result tmd::TriangleMeshDistance::signed_distance(const std::array<double, 3>& point) const
 {
-	Result result = this->unsigned_distance(point);
+	const Vec3d p(point[0], point[1], point[2]);
+	Result result = this->unsigned_distance(p);
 
 	const std::array<int, 3>& triangle = this->triangles[result.triangle_id];
 	Vec3d pseudonormal;
@@ -277,23 +282,36 @@ inline tmd::Result tmd::TriangleMeshDistance::signed_distance(const Vec3d& point
 		break;
 	}
 
-	const Vec3d u = point - result.nearest_point;
+	const Vec3d u = p - result.nearest_point;
 	result.distance *= (u.dot(pseudonormal) >= 0.0) ? 1.0 : -1.0;
 
 	return result;
 }
 
-inline tmd::Result tmd::TriangleMeshDistance::unsigned_distance(const Vec3d& point) const
+template<typename IndexableVector3double>
+inline tmd::Result tmd::TriangleMeshDistance::signed_distance(const IndexableVector3double& point) const
+{
+	return this->signed_distance({ static_cast<double>(point[0]), static_cast<double>(point[1]), static_cast<double>(point[2]) });
+}
+
+inline tmd::Result tmd::TriangleMeshDistance::unsigned_distance(const std::array<double, 3>& point) const
 {
 	if (!this->is_constructed) {
 		std::cout << "DistanceTriangleMesh error: not constructed." << std::endl;
 		exit(-1);
 	}
 
+	const Vec3d p(point[0], point[1], point[2]);
 	Result result;
 	result.distance = std::numeric_limits<double>::max();
-	this->_query(result, this->nodes[0], point);
+	this->_query(result, this->nodes[0], p);
 	return result;
+}
+
+template<typename IndexableVector3double>
+inline tmd::Result tmd::TriangleMeshDistance::unsigned_distance(const IndexableVector3double& point) const
+{
+	return this->unsigned_distance({static_cast<double>(point[0]), static_cast<double>(point[1]), static_cast<double>(point[2])});
 }
 
 inline void tmd::TriangleMeshDistance::_construct()
