@@ -1,7 +1,9 @@
 # TriangleMeshDistance
-Header only, single file, simple and efficient C++11 library to compute the signed distance function to a triangle mesh.
+Header only*, single file, simple and efficient C++11 library to compute the signed distance function to a triangle mesh.
 
 The distance computation to the triangle collection is accelerated with a sphere bounding volume hierarchy. The sign of the distance is resolved with the method presented in *"Generating Signed Distance Fields From Triangle Meshes"* by Bærentzen, Andreas & Aanæs, Henrik. (2002).
+
+\* Depends on Eigen
 
 ## Example
 ```cpp
@@ -24,9 +26,8 @@ std::cout << "Nearest entity: " << result.nearest_entity << std::endl;
 std::cout << "Nearest triangle index: " << result.triangle_id << std::endl;
 ```
 
-
-
 ## What you need to know about TriangleMeshDistance
+- The input triangle mesh must be fully connected and watertight. Triangle soups and meshes with holes will return the correct distance but the sign will be undefined.
 - `TriangleMeshDistance` keeps a copy of the vertex and triangle data.
 - The pseudonormals required to compute signed distances are calculated and stored at building time.
 - `TriangleMeshDistance` can be declared empty and constructed multiple times with different meshes. If the new mesh needs less memory than the curent one, memory allocations will be avoided.
