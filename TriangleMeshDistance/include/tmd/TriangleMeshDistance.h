@@ -28,31 +28,70 @@
 #include <algorithm>
 #include <unordered_map>
 
-#include <Eigen/Dense>
-
 namespace tmd
 {
 	/* ==========================================  DEFINITIONS  ========================================== */
-	// Point-Triangle distance definitions
-	enum class NearestEntity { V0, V1, V2, E01, E12, E02, F };
-	double point_triangle_sq_unsigned(NearestEntity& nearest_entity, Eigen::Vector3d& nearest_point, const Eigen::Vector3d& point, const Eigen::Vector3d& v0, const Eigen::Vector3d& v1, const Eigen::Vector3d& v2);
+	// Small vector 3D class class
+	template<typename FLOAT>
+	class Vec3r
+	{
+	public:
+		std::array<FLOAT, 3> v;
+		
+		Vec3r() {};
+		template<typename FLOAT_I>
+		Vec3r(const FLOAT_I& x, const FLOAT_I& y, const FLOAT_I& z) { v[0] = static_cast<FLOAT>(x); v[1] = static_cast<FLOAT>(y); v[2] = static_cast<FLOAT>(z); }
+		template<typename SIZE_T>
+		const FLOAT& operator[](const SIZE_T& i) const { return v[i]; }
+		template<typename SIZE_T>
+		FLOAT& operator[](const SIZE_T& i) { return v[i]; }
+		FLOAT dot(const Vec3r &u) const { return v[0]*u[0] + v[1]*u[1] + v[2]*u[2]; }
+		Vec3r<FLOAT> cross(const Vec3r &u) const { return Vec3r(v[1]*u[2] - v[2]*u[1], -v[0]*u[2] + v[2]*u[0], v[0]*u[1] - v[1]*u[0]); }
+		Vec3r<FLOAT> operator+(const Vec3r &u) const { return Vec3r(v[0]+u[0], v[1]+u[1], v[2]+u[2]); }
+		Vec3r<FLOAT> operator-(const Vec3r &u) const { return Vec3r(v[0]-u[0], v[1]-u[1], v[2]-u[2]); }
+		void operator+=(const Vec3r& u) { v[0] += u[0]; v[1] += u[1]; v[2] += u[2]; }
+		template<typename FLOAT_I>
+		Vec3r<FLOAT> operator*(const FLOAT_I &a) const { return Vec3r(static_cast<FLOAT>(a)*v[0], static_cast<FLOAT>(a)*v[1], static_cast<FLOAT>(a)*v[2]); }
+		template<typename FLOAT_I>
+		Vec3r<FLOAT> operator/(const FLOAT_I &a) const { return Vec3r(v[0]/static_cast<FLOAT>(a), v[1]/static_cast<FLOAT>(a), v[2]/static_cast<FLOAT>(a)); }
+		template<typename FLOAT_I>
+		void operator/=(const FLOAT_I& a) { v[0] /= static_cast<FLOAT>(a); v[1] /= static_cast<FLOAT>(a); v[2] /= static_cast<FLOAT>(a); }
+		FLOAT squaredNorm() const { return this->dot(*this); }
+		FLOAT norm() const { return std::sqrt(this->squaredNorm()); }
+		Vec3r<FLOAT> normalized() const { return (*this) / this->norm(); }
+		void normalize() { const FLOAT norm = this->norm(); v[0] /= norm; v[1] /= norm; v[2] /= norm; }
+	};
+	template<typename FLOAT, typename FLOAT_I>
+	static inline Vec3r<FLOAT> operator*(const FLOAT_I& a, const Vec3r<FLOAT>& v) { return Vec3r<FLOAT>(static_cast<FLOAT>(a) * v[0], static_cast<FLOAT>(a) * v[1], static_cast<FLOAT>(a) * v[2]); }
+	using Vec3d = Vec3r<double>;
 	// -----------------------------------
 
+	// Point-Triangle distance definitions
+	enum class NearestEntity { V0, V1, V2, E01, E12, E02, F };
+	double point_triangle_sq_unsigned(NearestEntity& nearest_entity, Vec3d& nearest_point, const Vec3d& point, const Vec3d& v0, const Vec3d& v1, const Vec3d& v2);
+	// -----------------------------------
+
+	// Struct that contains the result of a distance query
 	struct Result
 	{
 		double distance = std::numeric_limits<double>::max();
-		Eigen::Vector3d nearest_point;
+		Vec3d nearest_point;
 		tmd::NearestEntity nearest_entity;
 		int triangle_id = -1;
 	};
+	// -----------------------------------
 
+	/**
+	 * A class to compute signed and unsigned distances to a connected 
+	 * and watertight triangle mesh.
+	 */
 	class TriangleMeshDistance
 	{
 	private:
 		/* Definitions */
 		struct BoundingSphere
 		{
-			Eigen::Vector3d center;
+			Vec3d center;
 			double radius;
 		};
 
@@ -66,25 +105,25 @@ namespace tmd
 
 		struct Triangle
 		{
-			std::array<Eigen::Vector3d, 3> vertices;
+			std::array<Vec3d, 3> vertices;
 			int id = -1;
 		};
 
 
 		/* Fields */
-		std::vector<Eigen::Vector3d> vertices;
+		std::vector<Vec3d> vertices;
 		std::vector<std::array<int, 3>> triangles;
 		std::vector<Node> nodes;
-		std::vector<Eigen::Vector3d> pseudonormals_triangles;
-		std::vector<std::array<Eigen::Vector3d, 3>> pseudonormals_edges;
-		std::vector<Eigen::Vector3d> pseudonormals_vertices;
+		std::vector<Vec3d> pseudonormals_triangles;
+		std::vector<std::array<Vec3d, 3>> pseudonormals_edges;
+		std::vector<Vec3d> pseudonormals_vertices;
 		BoundingSphere root_bv;
 		bool is_constructed = false;
 
 		/* Methods */
 		void _construct();
 		void _build_tree(const int node_id, BoundingSphere& bounding_sphere, std::vector<Triangle> &triangles, const int begin, const int end);
-		void _query(Result &result, Node &node, const Eigen::Vector3d& point);
+		void _query(Result &result, const Node &node, const Vec3d& point) const;
 
 	public:
 
@@ -132,22 +171,22 @@ namespace tmd
 		void construct(const std::vector<IndexableVector3double>& vertices, const std::vector<IndexableVector3int>& triangles);
 
 		/**
-		 * @brief Computes the unsigned distance from a point to the triangle mesh.
+		 * @brief Computes the unsigned distance from a point to the triangle mesh. Thread safe.
 		 *
-		 * @param point to query from. Typed to `Eigen::Vector3d` but can be passed as `{x, y, z}`.
+		 * @param point to query from. Typed to `Vec3d` but can be passed as `{x, y, z}`.
 		 * 
 		 * @return Result containing distance, nearest point on the mesh, nearest entity and the nearest triangle index.
 		*/
-		Result unsigned_distance(const Eigen::Vector3d &point);
+		Result unsigned_distance(const Vec3d &point) const;
 
 		/**
-		 * @brief Computes the unsigned distance from a point to the triangle mesh.
+		 * @brief Computes the unsigned distance from a point to the triangle mesh. Thread safe.
 		 *
-		 * @param point to query from. Typed to `Eigen::Vector3d` but can be passed as `{x, y, z}`.
+		 * @param point to query from. Typed to `Vec3d` but can be passed as `{x, y, z}`.
 		 * 
 		 * @return Result containing distance, nearest point on the mesh, nearest entity and the nearest triangle index.
 		*/
-		Result signed_distance(const Eigen::Vector3d& point);
+		Result signed_distance(const Vec3d& point) const;
 	};
 }
 
@@ -204,12 +243,12 @@ inline void tmd::TriangleMeshDistance::construct(const std::vector<IndexableVect
 	this->_construct();
 }
 
-inline tmd::Result tmd::TriangleMeshDistance::signed_distance(const Eigen::Vector3d& point)
+inline tmd::Result tmd::TriangleMeshDistance::signed_distance(const Vec3d& point) const
 {
 	Result result = this->unsigned_distance(point);
 
 	const std::array<int, 3>& triangle = this->triangles[result.triangle_id];
-	Eigen::Vector3d pseudonormal;
+	Vec3d pseudonormal;
 	switch (result.nearest_entity)
 	{
 	case tmd::NearestEntity::V0:
@@ -238,13 +277,13 @@ inline tmd::Result tmd::TriangleMeshDistance::signed_distance(const Eigen::Vecto
 		break;
 	}
 
-	const Eigen::Vector3d u = point - result.nearest_point;
+	const Vec3d u = point - result.nearest_point;
 	result.distance *= (u.dot(pseudonormal) >= 0.0) ? 1.0 : -1.0;
 
 	return result;
 }
 
-inline tmd::Result tmd::TriangleMeshDistance::unsigned_distance(const Eigen::Vector3d& point)
+inline tmd::Result tmd::TriangleMeshDistance::unsigned_distance(const Vec3d& point) const
 {
 	if (!this->is_constructed) {
 		std::cout << "DistanceTriangleMesh error: not constructed." << std::endl;
@@ -282,10 +321,10 @@ inline void tmd::TriangleMeshDistance::_construct()
 
 	// Compute pseudonormals
 	//// Edge data structure
-	std::unordered_map<uint64_t, Eigen::Vector3d> edge_normals;
+	std::unordered_map<uint64_t, Vec3d> edge_normals;
 	std::unordered_map<uint64_t, int> edges_count;
 	const uint64_t n_vertices = (uint64_t)this->vertices.size();
-	auto add_edge_normal = [&](const int i, const int j, const Eigen::Vector3d& triangle_normal)
+	auto add_edge_normal = [&](const int i, const int j, const Vec3d& triangle_normal)
 	{
 		const uint64_t key = std::min(i, j) * n_vertices + std::max(i, j);
 		if (edge_normals.find(key) == edge_normals.end()) {
@@ -311,11 +350,11 @@ inline void tmd::TriangleMeshDistance::_construct()
 
 		// Triangle
 		const std::array<int, 3>& triangle = this->triangles[i];
-		const Eigen::Vector3d& a = this->vertices[triangle[0]];
-		const Eigen::Vector3d& b = this->vertices[triangle[1]];
-		const Eigen::Vector3d& c = this->vertices[triangle[2]];
+		const Vec3d& a = this->vertices[triangle[0]];
+		const Vec3d& b = this->vertices[triangle[1]];
+		const Vec3d& c = this->vertices[triangle[2]];
 
-		const Eigen::Vector3d triangle_normal = (b - a).cross(c - a).normalized();
+		const Vec3d triangle_normal = (b - a).cross(c - a).normalized();
 		this->pseudonormals_triangles[i] = triangle_normal;
 
 		// Vertex
@@ -332,7 +371,7 @@ inline void tmd::TriangleMeshDistance::_construct()
 		add_edge_normal(triangle[0], triangle[2], triangle_normal);
 	}
 
-	for (Eigen::Vector3d& n : this->pseudonormals_vertices) {
+	for (Vec3d& n : this->pseudonormals_vertices) {
 		n.normalize();
 	}
 
@@ -379,23 +418,32 @@ inline void tmd::TriangleMeshDistance::_build_tree(const int node_id, BoundingSp
 
 		//// Bounding sphere
 		const Triangle& tri = triangles[begin];
-		const Eigen::Vector3d center = (tri.vertices[0] + tri.vertices[1] + tri.vertices[2]) / 3.0;
+		const Vec3d center = (tri.vertices[0] + tri.vertices[1] + tri.vertices[2]) / 3.0;
 		const double radius = std::max(std::max((tri.vertices[0] - center).norm(), (tri.vertices[1] - center).norm()), (tri.vertices[2] - center).norm());
 		bounding_sphere.center = center;
 		bounding_sphere.radius = radius;
 	}
 	else {
-		// Compute AxisAligned Bounding Box of all current triangles
-		Eigen::AlignedBox3d aabb;
-		aabb.setEmpty();
+		// Compute AxisAligned Bounding Box center and largest dimension of all current triangles
+		Vec3d top = { std::numeric_limits<double>::lowest(), std::numeric_limits<double>::lowest(), std::numeric_limits<double>::lowest() };
+		Vec3d bottom = { std::numeric_limits<double>::max(), std::numeric_limits<double>::max(), std::numeric_limits<double>::max() };
+		Vec3d center = {0, 0, 0};
 		for (int tri_i = begin; tri_i < end; tri_i++) {
-			for (int i = 0; i < 3; i++) {
-				aabb.extend(triangles[tri_i].vertices[i]);
+			for (int vertex_i = 0; vertex_i < 3; vertex_i++) {
+				const Vec3d& p = triangles[tri_i].vertices[vertex_i];
+				center += p;
+
+				for (int coord_i = 0; coord_i < 3; coord_i++) {
+					top[coord_i] = std::max(top[coord_i], p[coord_i]);
+					bottom[coord_i] = std::min(bottom[coord_i], p[coord_i]);
+				}
 			}
 		}
+		center /= 3*n_triangles;
+		const Vec3d diagonal = top - bottom;
+		const int split_dim = (int)(std::max_element(&diagonal[0], &diagonal[0] + 3) - &diagonal[0]);
 
 		// Set node bounding sphere
-		const Eigen::Vector3d center = aabb.center();
 		double radius_sq = 0.0;
 		for (int tri_i = begin; tri_i < end; tri_i++) {
 			for (int i = 0; i < 3; i++) {
@@ -404,10 +452,6 @@ inline void tmd::TriangleMeshDistance::_build_tree(const int node_id, BoundingSp
 		}
 		bounding_sphere.center = center;
 		bounding_sphere.radius = std::sqrt(radius_sq);
-
-		// Find the split dimension (largest)
-		const Eigen::Vector3d diagonal = aabb.diagonal();
-		const int split_dim = (int)(std::max_element(&diagonal[0], &diagonal[0] + 3) - &diagonal[0]);
 
 		// Sort the triangles according to their center along the split dimension
 		std::sort(triangles.begin() + begin, triangles.begin() + end,
@@ -430,17 +474,17 @@ inline void tmd::TriangleMeshDistance::_build_tree(const int node_id, BoundingSp
 	}
 }
 
-inline void tmd::TriangleMeshDistance::_query(Result& result, Node& node, const Eigen::Vector3d& point)
+inline void tmd::TriangleMeshDistance::_query(Result& result, const Node& node, const Vec3d& point) const
 {
 	// End of recursion
 	if (node.left == -1) {
 		const int triangle_id = node.right;
 		const std::array<int, 3>& triangle = this->triangles[node.right]; // If left == -1, right is the triangle_id
-		const Eigen::Vector3d& v0 = this->vertices[triangle[0]];
-		const Eigen::Vector3d& v1 = this->vertices[triangle[1]];
-		const Eigen::Vector3d& v2 = this->vertices[triangle[2]];
+		const Vec3d& v0 = this->vertices[triangle[0]];
+		const Vec3d& v1 = this->vertices[triangle[1]];
+		const Vec3d& v2 = this->vertices[triangle[2]];
 
-		Eigen::Vector3d nearest_point;
+		Vec3d nearest_point;
 		tmd::NearestEntity nearest_entity;
 		const double distance_sq = tmd::point_triangle_sq_unsigned(nearest_entity, nearest_point, point, v0, v1, v2);
 
@@ -480,11 +524,11 @@ inline void tmd::TriangleMeshDistance::_query(Result& result, Node& node, const 
 	}
 }
 
-double tmd::point_triangle_sq_unsigned(NearestEntity& nearest_entity, Eigen::Vector3d& nearest_point, const Eigen::Vector3d& point, const Eigen::Vector3d& v0, const Eigen::Vector3d& v1, const Eigen::Vector3d& v2)
+double tmd::point_triangle_sq_unsigned(NearestEntity& nearest_entity, Vec3d& nearest_point, const Vec3d& point, const Vec3d& v0, const Vec3d& v1, const Vec3d& v2)
 {
-	Eigen::Vector3d diff = v0 - point;
-	Eigen::Vector3d edge0 = v1 - v0;
-	Eigen::Vector3d edge1 = v2 - v0;
+	Vec3d diff = v0 - point;
+	Vec3d edge0 = v1 - v0;
+	Vec3d edge1 = v2 - v0;
 	double a00 = edge0.dot(edge0);
 	double a01 = edge0.dot(edge1);
 	double a11 = edge1.dot(edge1);
