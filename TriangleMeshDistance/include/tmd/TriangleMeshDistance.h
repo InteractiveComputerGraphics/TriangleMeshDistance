@@ -280,21 +280,6 @@ inline void tmd::TriangleMeshDistance::_construct()
 	this->nodes.push_back(Node());
 	this->_build_tree(0, this->root_bv, triangles, 0, (int)triangles.size());
 
-	if (false) {  // Test: Check that triangles appear exactly only once
-		std::vector<int> count(this->triangles.size(), 0);
-		for (const Node& node : this->nodes) {
-			if (node.left == -1) {
-				count[node.right]++;
-			}
-		}
-		for (size_t i = 0; i < count.size(); i++) {
-			if (count[i] != 1) {
-				std::cout << "DistanceTriangleMesh error: Duplicated triangles found in the tree." << std::endl;
-				exit(-1);
-			}
-		}
-	}
-
 	// Compute pseudonormals
 	//// Edge data structure
 	std::unordered_map<uint64_t, Eigen::Vector3d> edge_normals;
