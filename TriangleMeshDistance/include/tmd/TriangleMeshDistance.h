@@ -1,7 +1,7 @@
 /*
 	The MIT License (MIT)
 
-	Copyright (c) 2021 JosÈ Antonio Fern·ndez Fern·ndez
+	Copyright (c) 2021 Jos√© Antonio Fern√°ndez Fern√°ndez
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -68,7 +68,7 @@ namespace tmd
 
 	// Point-Triangle distance definitions
 	enum class NearestEntity { V0, V1, V2, E01, E12, E02, F };
-	double point_triangle_sq_unsigned(NearestEntity& nearest_entity, Vec3d& nearest_point, const Vec3d& point, const Vec3d& v0, const Vec3d& v1, const Vec3d& v2);
+	static double point_triangle_sq_unsigned(NearestEntity& nearest_entity, Vec3d& nearest_point, const Vec3d& point, const Vec3d& v0, const Vec3d& v1, const Vec3d& v2);
 	// -----------------------------------
 
 	// Struct that contains the result of a distance query
@@ -542,7 +542,7 @@ inline void tmd::TriangleMeshDistance::_query(Result& result, const Node& node, 
 	}
 }
 
-double tmd::point_triangle_sq_unsigned(NearestEntity& nearest_entity, Vec3d& nearest_point, const Vec3d& point, const Vec3d& v0, const Vec3d& v1, const Vec3d& v2)
+static double tmd::point_triangle_sq_unsigned(NearestEntity& nearest_entity, Vec3d& nearest_point, const Vec3d& point, const Vec3d& v0, const Vec3d& v1, const Vec3d& v2)
 {
 	Vec3d diff = v0 - point;
 	Vec3d edge0 = v1 - v0;
