@@ -34,5 +34,5 @@ std::cout << "Nearest triangle index: " << result.triangle_id << std::endl;
 ## Projects using TriangleMeshDistance
 
 - [Discregrid](https://github.com/InteractiveComputerGraphics/Discregrid) - A static C++ library for the generation of discrete functions on a box-shaped domain. This is especially suited for the discretization of signed distance fields.
-- [PBD](https://github.com/InteractiveComputerGraphics/PositionBasedDynamics) - A C++ library for physically-based simulation of rigid bodies, deformables, cloth and fluids using Position-Based Dynamics
-- [SPlisHSPlasH](https://github.com/InteractiveComputerGraphics/SPlisHSPlasH) - A C++ library for the physically-based simulation of fluids using Smoothed Particle Hydrodynamics (cf. video) (Coming soon)
+- [PBD](https://github.com/InteractiveComputerGraphics/PositionBasedDynamics) - A C++ library for physically-based simulation of rigid bodies, deformables, cloth and fluids using Position-Based Dynamics.
+- [SPlisHSPlasH](https://github.com/InteractiveComputerGraphics/SPlisHSPlasH) - A C++ library for the physically-based simulation of fluids using Smoothed Particle Hydrodynamics.
