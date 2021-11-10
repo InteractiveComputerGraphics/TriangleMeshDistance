@@ -213,14 +213,14 @@ inline tmd::TriangleMeshDistance::TriangleMeshDistance(const std::vector<Indexab
 template<typename FLOAT, typename INT, typename SIZE_T>
 inline void tmd::TriangleMeshDistance::construct(const FLOAT* vertices, const SIZE_T n_vertices, const INT* triangles, const SIZE_T n_triangles)
 {
-	this->vertices.resize(3 * n_vertices);
+	this->vertices.resize((size_t)n_vertices);
 	for (size_t i = 0; i < (size_t)n_vertices; i++) {
 		this->vertices[i][0] = (double)vertices[3*i + 0];
 		this->vertices[i][1] = (double)vertices[3*i + 1];
 		this->vertices[i][2] = (double)vertices[3*i + 2];
 	}
 
-	this->triangles.resize(3 * n_triangles);
+	this->triangles.resize((size_t)n_triangles);
 	for (size_t i = 0; i < (size_t)n_triangles; i++) {
 		this->triangles[i][0] = (int)triangles[3*i + 0];
 		this->triangles[i][1] = (int)triangles[3*i + 1];
