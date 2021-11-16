@@ -30,7 +30,7 @@
 
 namespace tmd
 {
-	/* ==========================================  DEFINITIONS  ========================================== */
+	/* ==========================================  DECLARATIONS  ========================================== */
 	// Small vector 3D class class
 	template<typename FLOAT>
 	class Vec3r
@@ -66,7 +66,7 @@ namespace tmd
 	using Vec3d = Vec3r<double>;
 	// -----------------------------------
 
-	// Point-Triangle distance definitions
+	// Point-Triangle distance declarations
 	enum class NearestEntity { V0, V1, V2, E01, E12, E02, F };
 	static double point_triangle_sq_unsigned(NearestEntity& nearest_entity, Vec3d& nearest_point, const Vec3d& point, const Vec3d& v0, const Vec3d& v1, const Vec3d& v2);
 	// -----------------------------------
@@ -88,7 +88,7 @@ namespace tmd
 	class TriangleMeshDistance
 	{
 	private:
-		/* Definitions */
+		/* Private declarations */
 		struct BoundingSphere
 		{
 			Vec3d center;
@@ -110,7 +110,7 @@ namespace tmd
 		};
 
 
-		/* Fields */
+		/* Private fields */
 		std::vector<Vec3d> vertices;
 		std::vector<std::array<int, 3>> triangles;
 		std::vector<Node> nodes;
@@ -120,14 +120,14 @@ namespace tmd
 		BoundingSphere root_bv;
 		bool is_constructed = false;
 
-		/* Methods */
+		/* Private methods */
 		void _construct();
 		void _build_tree(const int node_id, BoundingSphere& bounding_sphere, std::vector<Triangle> &triangles, const int begin, const int end);
 		void _query(Result &result, const Node &node, const Vec3d& point) const;
 
 	public:
 
-		/* Methods */
+		/* Public methods */
 		TriangleMeshDistance() = default;
 
 		/**
@@ -197,7 +197,7 @@ namespace tmd
 
 
 
-/* ==========================================  DECLARATIONS  ========================================== */
+/* ==========================================  DEFINITIONS  ========================================== */
 template<typename FLOAT, typename INT, typename SIZE_T>
 inline tmd::TriangleMeshDistance::TriangleMeshDistance(const FLOAT* vertices, const SIZE_T n_vertices, const INT* triangles, const SIZE_T n_triangles)
 {
