@@ -376,9 +376,9 @@ inline void tmd::TriangleMeshDistance::_construct()
 		this->pseudonormals_triangles[i] = triangle_normal;
 
 		// Vertex
-		const double alpha_0 = std::acos(std::abs((b - a).normalized().dot((c - a).normalized())));
-		const double alpha_1 = std::acos(std::abs((a - b).normalized().dot((c - b).normalized())));
-		const double alpha_2 = std::acos(std::abs((b - c).normalized().dot((a - c).normalized())));
+		const double alpha_0 = std::acos((b - a).normalized().dot((c - a).normalized()));
+		const double alpha_1 = std::acos((a - b).normalized().dot((c - b).normalized()));
+		const double alpha_2 = std::acos((b - c).normalized().dot((a - c).normalized()));
 		this->pseudonormals_vertices[triangle[0]] += alpha_0 * triangle_normal;
 		this->pseudonormals_vertices[triangle[1]] += alpha_1 * triangle_normal;
 		this->pseudonormals_vertices[triangle[2]] += alpha_2 * triangle_normal;
