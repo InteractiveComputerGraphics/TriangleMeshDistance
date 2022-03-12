@@ -400,7 +400,7 @@ inline void tmd::TriangleMeshDistance::_construct()
 		this->pseudonormals_edges[tri_i][2] = get_edge_normal(triangle[0], triangle[2]).normalized();
 	}
 
-	// Check that the mesh is watertight: All edges appear exactly once.
+	// Check that the mesh is watertight: All edges appear exactly twice.
 	bool single_edge_found = false;
 	bool triple_edge_found = false;
 	for (const auto edge_count : edges_count) {
