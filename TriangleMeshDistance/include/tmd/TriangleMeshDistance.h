@@ -69,6 +69,10 @@ namespace tmd
 
 	// Point-Triangle distance declarations
 	enum class NearestEntity { V0, V1, V2, E01, E12, E02, F };
+
+	/**
+	 * Computes the squared distance, the nearest entity (vertex, edge or face) and the nearest point from a point to a triangle.
+	 */
 	static double point_triangle_sq_unsigned(NearestEntity& nearest_entity, Vec3d& nearest_point, const Vec3d& point, const Vec3d& v0, const Vec3d& v1, const Vec3d& v2);
 	// -----------------------------------
 
