@@ -73,16 +73,17 @@ namespace tmd
 	/**
 	 * Computes the squared distance, the nearest entity (vertex, edge or face) and the nearest point from a point to a triangle.
 	 */
-	static void point_triangle_sq_unsigned(double& distance_sq, NearestEntity& nearest_entity, Vec3d& barycentric, const Vec3d& point, const Vec3d& v0, const Vec3d& v1, const Vec3d& v2);
+	static void point_triangle_sq_unsigned(double& distance_sq, NearestEntity& nearest_entity, Vec3d& barycentric, Vec3d& nearest_point, const Vec3d& point, const Vec3d& v0, const Vec3d& v1, const Vec3d& v2);
 	// -----------------------------------
 
 	// Struct that contains the result of a distance query
 	struct Result
 	{
 		double distance = std::numeric_limits<double>::max();
-		Vec3d barycentric;
+		Vec3d nearest_point;
 		tmd::NearestEntity nearest_entity;
 		int triangle_id = -1;
+		Vec3d barycentric;
 	};
 	// -----------------------------------
 
@@ -515,10 +516,12 @@ inline void tmd::TriangleMeshDistance::_query(Result& result, const Node& node, 
 		double distance_sq;
 		tmd::NearestEntity nearest_entity;
 		Vec3d barycentric;
-		tmd::point_triangle_sq_unsigned(distance_sq, nearest_entity, barycentric, point, v0, v1, v2);
+		Vec3d nearest_point;
+		tmd::point_triangle_sq_unsigned(distance_sq, nearest_entity, barycentric, nearest_point, point, v0, v1, v2);
 
 		if (distance_sq < result.distance * result.distance) {
 			result.nearest_entity = nearest_entity;
+			result.nearest_point = nearest_point;
 			result.barycentric = barycentric;
 			result.distance = std::sqrt(distance_sq);
 			result.triangle_id = triangle_id;
@@ -553,7 +556,7 @@ inline void tmd::TriangleMeshDistance::_query(Result& result, const Node& node, 
 	}
 }
 
-static void tmd::point_triangle_sq_unsigned(double& distance_sq, NearestEntity& nearest_entity, Vec3d& barycentric, const Vec3d& p, const Vec3d& a, const Vec3d& b, const Vec3d& c)
+static void tmd::point_triangle_sq_unsigned(double& distance_sq, NearestEntity& nearest_entity, Vec3d& barycentric, Vec3d& nearest_point, const Vec3d& p, const Vec3d& a, const Vec3d& b, const Vec3d& c)
 {
 	// This function is a modified version of the one found in the Real-Time Collision Detection book by Ericson.
 	Vec3d ab = b - a;
@@ -567,7 +570,8 @@ static void tmd::point_triangle_sq_unsigned(double& distance_sq, NearestEntity& 
 	if (snom <= 0.0 && tnom <= 0.0) {
 		nearest_entity = NearestEntity::V0;
 		barycentric = { 1.0, 0.0, 0.0 };
-		distance_sq = (p - a).squaredNorm();
+		nearest_point = a;
+		distance_sq = (p - nearest_point).squaredNorm();
 		return;
 	}
 
@@ -576,13 +580,15 @@ static void tmd::point_triangle_sq_unsigned(double& distance_sq, NearestEntity& 
 	if (sdenom <= 0.0 && unom <= 0.0) {
 		nearest_entity = NearestEntity::V1;
 		barycentric = { 0.0, 1.0, 0.0 };
-		distance_sq = (p - b).squaredNorm();
+		nearest_point = b;
+		distance_sq = (p - nearest_point).squaredNorm();
 		return;
 	}
 	if (tdenom <= 0.0 && udenom <= 0.0) {
 		nearest_entity = NearestEntity::V2;
 		barycentric = { 0.0, 0.0, 1.0 };
-		distance_sq = (p - c).squaredNorm();
+		nearest_point = c;
+		distance_sq = (p - nearest_point).squaredNorm();
 		return;
 	}
 
@@ -595,7 +601,8 @@ static void tmd::point_triangle_sq_unsigned(double& distance_sq, NearestEntity& 
 		double arc = snom / (snom + sdenom);
 		nearest_entity = NearestEntity::E01;
 		barycentric = { 1.0 - arc, arc, 0.0 };
-		distance_sq = (p - (barycentric[0]*a + barycentric[1]*b)).squaredNorm();
+		nearest_point = barycentric[0] * a + barycentric[1] * b;
+		distance_sq = (p - nearest_point).squaredNorm();
 		return;
 	}
 
@@ -605,7 +612,8 @@ static void tmd::point_triangle_sq_unsigned(double& distance_sq, NearestEntity& 
 		double arc = unom / (unom + udenom);
 		nearest_entity = NearestEntity::E12;
 		barycentric = { 0.0, 1.0 - arc, arc };
-		distance_sq = (p - (barycentric[1]*b + barycentric[2]*c)).squaredNorm();
+		nearest_point = barycentric[1] * b + barycentric[2] * c;
+		distance_sq = (p - nearest_point).squaredNorm();
 		return;
 	}
 
@@ -615,7 +623,8 @@ static void tmd::point_triangle_sq_unsigned(double& distance_sq, NearestEntity& 
 		double arc = tnom / (tnom + tdenom);
 		nearest_entity = NearestEntity::E02;
 		barycentric = { 1.0 - arc, 0.0, arc };
-		distance_sq = (p - (barycentric[0]*a + barycentric[2]*c)).squaredNorm();
+		nearest_point = barycentric[0] * a + barycentric[2] * c;
+		distance_sq = (p - nearest_point).squaredNorm();
 		return;
 	}
 
@@ -625,6 +634,7 @@ static void tmd::point_triangle_sq_unsigned(double& distance_sq, NearestEntity& 
 	double w = 1.0 - u - v; // = vc / (va + vb + vc)
 	nearest_entity = NearestEntity::F;
 	barycentric = { u, v, w };
-	distance_sq = (p - (u*a + v*b + w*c)).squaredNorm();
+	nearest_point = u*a + v*b + w*c;
+	distance_sq = (p - nearest_point).squaredNorm();
 	return;
 }

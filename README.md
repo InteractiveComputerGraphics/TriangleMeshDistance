@@ -23,6 +23,7 @@ tmd::Result result = mesh_distance.signed_distance({ x, y, z });
 std::cout << "Signed distance: " << result.distance << std::endl;
 std::cout << "Nearest entity: " << result.nearest_entity << std::endl;
 std::cout << "Nearest triangle index: " << result.triangle_id << std::endl;
+std::cout << "Nearest point: " << result.nearest_point << std::endl;
 std::cout << "Nearest point barycentric coordinates: " << result.barycentric << std::endl;
 ```
 
