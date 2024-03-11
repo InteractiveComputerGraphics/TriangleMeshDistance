@@ -73,14 +73,14 @@ namespace tmd
 	/**
 	 * Computes the squared distance, the nearest entity (vertex, edge or face) and the nearest point from a point to a triangle.
 	 */
-	static double point_triangle_sq_unsigned(NearestEntity& nearest_entity, Vec3d& nearest_point, const Vec3d& point, const Vec3d& v0, const Vec3d& v1, const Vec3d& v2);
+	static void point_triangle_sq_unsigned(double& distance_sq, NearestEntity& nearest_entity, Vec3d& barycentric, const Vec3d& point, const Vec3d& v0, const Vec3d& v1, const Vec3d& v2);
 	// -----------------------------------
 
 	// Struct that contains the result of a distance query
 	struct Result
 	{
 		double distance = std::numeric_limits<double>::max();
-		Vec3d nearest_point;
+		Vec3d barycentric;
 		tmd::NearestEntity nearest_entity;
 		int triangle_id = -1;
 	};
@@ -287,7 +287,12 @@ inline tmd::Result tmd::TriangleMeshDistance::signed_distance(const std::array<d
 		break;
 	}
 
-	const Vec3d u = p - result.nearest_point;
+	const Vec3d nearest_point(
+		result.barycentric[0]*this->vertices[triangle[0]] +
+		result.barycentric[1]*this->vertices[triangle[1]] + 
+		result.barycentric[2]*this->vertices[triangle[2]]
+		);
+	const Vec3d u = p - nearest_point;
 	result.distance *= (u.dot(pseudonormal) >= 0.0) ? 1.0 : -1.0;
 
 	return result;
@@ -507,13 +512,14 @@ inline void tmd::TriangleMeshDistance::_query(Result& result, const Node& node, 
 		const Vec3d& v1 = this->vertices[triangle[1]];
 		const Vec3d& v2 = this->vertices[triangle[2]];
 
-		Vec3d nearest_point;
+		double distance_sq;
 		tmd::NearestEntity nearest_entity;
-		const double distance_sq = tmd::point_triangle_sq_unsigned(nearest_entity, nearest_point, point, v0, v1, v2);
+		Vec3d barycentric;
+		tmd::point_triangle_sq_unsigned(distance_sq, nearest_entity, barycentric, point, v0, v1, v2);
 
 		if (distance_sq < result.distance * result.distance) {
-			result.nearest_point = nearest_point;
 			result.nearest_entity = nearest_entity;
+			result.barycentric = barycentric;
 			result.distance = std::sqrt(distance_sq);
 			result.triangle_id = triangle_id;
 		}
@@ -547,260 +553,78 @@ inline void tmd::TriangleMeshDistance::_query(Result& result, const Node& node, 
 	}
 }
 
-static double tmd::point_triangle_sq_unsigned(NearestEntity& nearest_entity, Vec3d& nearest_point, const Vec3d& point, const Vec3d& v0, const Vec3d& v1, const Vec3d& v2)
+static void tmd::point_triangle_sq_unsigned(double& distance_sq, NearestEntity& nearest_entity, Vec3d& barycentric, const Vec3d& p, const Vec3d& a, const Vec3d& b, const Vec3d& c)
 {
-	Vec3d diff = v0 - point;
-	Vec3d edge0 = v1 - v0;
-	Vec3d edge1 = v2 - v0;
-	double a00 = edge0.dot(edge0);
-	double a01 = edge0.dot(edge1);
-	double a11 = edge1.dot(edge1);
-	double b0 = diff.dot(edge0);
-	double b1 = diff.dot(edge1);
-	double c = diff.dot(diff);
-	double det = std::abs(a00 * a11 - a01 * a01);
-	double s = a01 * b1 - a11 * b0;
-	double t = a01 * b0 - a00 * b1;
+	// This function is a modified version of the one found in the Real-Time Collision Detection book by Ericson.
+	Vec3d ab = b - a;
+	Vec3d ac = c - a;
+	Vec3d bc = c - b;
 
-	double d2 = -1.0;
-
-	if (s + t <= det)
-	{
-		if (s < 0)
-		{
-			if (t < 0)  // region 4
-			{
-				if (b0 < 0)
-				{
-					t = 0;
-					if (-b0 >= a00)
-					{
-						nearest_entity = NearestEntity::V1;
-						s = 1;
-						d2 = a00 + (2) * b0 + c;
-					}
-					else
-					{
-						nearest_entity = NearestEntity::E01;
-						s = -b0 / a00;
-						d2 = b0 * s + c;
-					}
-				}
-				else
-				{
-					s = 0;
-					if (b1 >= 0)
-					{
-						nearest_entity = NearestEntity::V0;
-						t = 0;
-						d2 = c;
-					}
-					else if (-b1 >= a11)
-					{
-						nearest_entity = NearestEntity::V2;
-						t = 1;
-						d2 = a11 + (2) * b1 + c;
-					}
-					else
-					{
-						nearest_entity = NearestEntity::E02;
-						t = -b1 / a11;
-						d2 = b1 * t + c;
-					}
-				}
-			}
-			else  // region 3
-			{
-				s = 0;
-				if (b1 >= 0)
-				{
-					nearest_entity = NearestEntity::V0;
-					t = 0;
-					d2 = c;
-				}
-				else if (-b1 >= a11)
-				{
-					nearest_entity = NearestEntity::V2;
-					t = 1;
-					d2 = a11 + (2) * b1 + c;
-				}
-				else
-				{
-					nearest_entity = NearestEntity::E02;
-					t = -b1 / a11;
-					d2 = b1 * t + c;
-				}
-			}
-		}
-		else if (t < 0)  // region 5
-		{
-			t = 0;
-			if (b0 >= 0)
-			{
-				nearest_entity = NearestEntity::V0;
-				s = 0;
-				d2 = c;
-			}
-			else if (-b0 >= a00)
-			{
-				nearest_entity = NearestEntity::V1;
-				s = 1;
-				d2 = a00 + (2) * b0 + c;
-			}
-			else
-			{
-				nearest_entity = NearestEntity::E01;
-				s = -b0 / a00;
-				d2 = b0 * s + c;
-			}
-		}
-		else  // region 0 
-		{
-			nearest_entity = NearestEntity::F;
-			// minimum at interior point
-			double invDet = (1) / det;
-			s *= invDet;
-			t *= invDet;
-			d2 = s * (a00 * s + a01 * t + (2) * b0) +
-				t * (a01 * s + a11 * t + (2) * b1) + c;
-		}
-	}
-	else
-	{
-		double tmp0, tmp1, numer, denom;
-
-		if (s < 0)  // region 2
-		{
-			tmp0 = a01 + b0;
-			tmp1 = a11 + b1;
-			if (tmp1 > tmp0)
-			{
-				numer = tmp1 - tmp0;
-				denom = a00 - (2) * a01 + a11;
-				if (numer >= denom)
-				{
-					nearest_entity = NearestEntity::V1;
-					s = 1;
-					t = 0;
-					d2 = a00 + (2) * b0 + c;
-				}
-				else
-				{
-					nearest_entity = NearestEntity::E12;
-					s = numer / denom;
-					t = 1 - s;
-					d2 = s * (a00 * s + a01 * t + (2) * b0) +
-						t * (a01 * s + a11 * t + (2) * b1) + c;
-				}
-			}
-			else
-			{
-				s = 0;
-				if (tmp1 <= 0)
-				{
-					nearest_entity = NearestEntity::V2;
-					t = 1;
-					d2 = a11 + (2) * b1 + c;
-				}
-				else if (b1 >= 0)
-				{
-					nearest_entity = NearestEntity::V0;
-					t = 0;
-					d2 = c;
-				}
-				else
-				{
-					nearest_entity = NearestEntity::E02;
-					t = -b1 / a11;
-					d2 = b1 * t + c;
-				}
-			}
-		}
-		else if (t < 0)  // region 6
-		{
-			tmp0 = a01 + b1;
-			tmp1 = a00 + b0;
-			if (tmp1 > tmp0)
-			{
-				numer = tmp1 - tmp0;
-				denom = a00 - (2) * a01 + a11;
-				if (numer >= denom)
-				{
-					nearest_entity = NearestEntity::V2;
-					t = 1;
-					s = 0;
-					d2 = a11 + (2) * b1 + c;
-				}
-				else
-				{
-					nearest_entity = NearestEntity::E12;
-					t = numer / denom;
-					s = 1 - t;
-					d2 = s * (a00 * s + a01 * t + (2) * b0) +
-						t * (a01 * s + a11 * t + (2) * b1) + c;
-				}
-			}
-			else
-			{
-				t = 0;
-				if (tmp1 <= 0)
-				{
-					nearest_entity = NearestEntity::V1;
-					s = 1;
-					d2 = a00 + (2) * b0 + c;
-				}
-				else if (b0 >= 0)
-				{
-					nearest_entity = NearestEntity::V0;
-					s = 0;
-					d2 = c;
-				}
-				else
-				{
-					nearest_entity = NearestEntity::E01;
-					s = -b0 / a00;
-					d2 = b0 * s + c;
-				}
-			}
-		}
-		else  // region 1
-		{
-			numer = a11 + b1 - a01 - b0;
-			if (numer <= 0)
-			{
-				nearest_entity = NearestEntity::V2;
-				s = 0;
-				t = 1;
-				d2 = a11 + (2) * b1 + c;
-			}
-			else
-			{
-				denom = a00 - (2) * a01 + a11;
-				if (numer >= denom)
-				{
-					nearest_entity = NearestEntity::V1;
-					s = 1;
-					t = 0;
-					d2 = a00 + (2) * b0 + c;
-				}
-				else
-				{
-					nearest_entity = NearestEntity::E12;
-					s = numer / denom;
-					t = 1 - s;
-					d2 = s * (a00 * s + a01 * t + (2) * b0) +
-						t * (a01 * s + a11 * t + (2) * b1) + c;
-				}
-			}
-		}
+	// Compute parametric position s for projection P’ of P on AB
+	double snom = (p - a).dot(ab), sdenom = (p - b).dot(a - b);
+	// Compute parametric position t for projection P’ of P on AC
+	double tnom = (p - a).dot(ac), tdenom = (p - c).dot(a - c);
+	if (snom <= 0.0 && tnom <= 0.0) {
+		nearest_entity = NearestEntity::V0;
+		barycentric = { 1.0, 0.0, 0.0 };
+		distance_sq = (p - a).squaredNorm();
+		return;
 	}
 
-	// Account for numerical round-off error.
-	if (d2 < 0)
-	{
-		d2 = 0;
+	// Compute parametric position u for projection P’ of P on BC
+	double unom = (p - b).dot(bc), udenom = (p - c).dot(b - c);
+	if (sdenom <= 0.0 && unom <= 0.0) {
+		nearest_entity = NearestEntity::V1;
+		barycentric = { 0.0, 1.0, 0.0 };
+		distance_sq = (p - b).squaredNorm();
+		return;
+	}
+	if (tdenom <= 0.0 && udenom <= 0.0) {
+		nearest_entity = NearestEntity::V2;
+		barycentric = { 0.0, 0.0, 1.0 };
+		distance_sq = (p - c).squaredNorm();
+		return;
 	}
 
-	nearest_point = v0 + s * edge0 + t * edge1;
-	return d2;
+	// Normal for the triangle
+	Vec3d n = ab.cross(ac);
+
+	// Check if P is outside AB
+	double vc = n.dot((a - p).cross(b - p));
+	if (vc <= 0.0 && snom >= 0.0 && sdenom >= 0.0) {
+		double arc = snom / (snom + sdenom);
+		nearest_entity = NearestEntity::E01;
+		barycentric = { 1.0 - arc, arc, 0.0 };
+		distance_sq = (p - (barycentric[0]*a + barycentric[1]*b)).squaredNorm();
+		return;
+	}
+
+	// Check if P is outside BC
+	double va = n.dot((b - p).cross(c - p));
+	if (va <= 0.0 && unom >= 0.0 && udenom >= 0.0) {
+		double arc = unom / (unom + udenom);
+		nearest_entity = NearestEntity::E12;
+		barycentric = { 0.0, 1.0 - arc, arc };
+		distance_sq = (p - (barycentric[1]*b + barycentric[2]*c)).squaredNorm();
+		return;
+	}
+
+	// Check if P is outside AC
+	double vb = n.dot((c - p).cross(a - p));
+	if (vb <= 0.0 && tnom >= 0.0 && tdenom >= 0.0) {
+		double arc = tnom / (tnom + tdenom);
+		nearest_entity = NearestEntity::E02;
+		barycentric = { 1.0 - arc, 0.0, arc };
+		distance_sq = (p - (barycentric[0]*a + barycentric[2]*c)).squaredNorm();
+		return;
+	}
+
+	// P must project inside the triangle; compute using barycentric coordinates
+	double u = va / (va + vb + vc);
+	double v = vb / (va + vb + vc);
+	double w = 1.0 - u - v; // = vc / (va + vb + vc)
+	nearest_entity = NearestEntity::F;
+	barycentric = { u, v, w };
+	distance_sq = (p - (u*a + v*b + w*c)).squaredNorm();
+	return;
 }

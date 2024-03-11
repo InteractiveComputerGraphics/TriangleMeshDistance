@@ -39,9 +39,19 @@ TEST_CASE("TriangleMeshDistance", "")
 		for (double x = -2; x < 2; x += 0.13) {
 			for (double y = -2; y < 2; y += 0.13) {
 				for (double z = -2; z < 2; z += 0.13) {
-					const auto result = mesh_distance.signed_distance({ x, y, z });
+					const tmd::Vec3d point = { x, y, z };
+					const auto result = mesh_distance.signed_distance(point);
 					const double exact = point_AABB_signed({ x, y, z }, { -1, -1, -1 }, { 1, 1, 1 });
+					const std::array<int, 3> nearest_triangle = connectivity[result.triangle_id];
+					const tmd::Vec3d nearest_point = { 
+						result.barycentric[0] * vertices[nearest_triangle[0]] + 
+						result.barycentric[1] * vertices[nearest_triangle[1]] + 
+						result.barycentric[2] * vertices[nearest_triangle[2]],
+					};
+					const double nearest_point_distance = (point - nearest_point).norm();
+
 					REQUIRE(std::abs(result.distance - exact) < 1e-10);
+					REQUIRE(std::abs(std::abs(nearest_point_distance) - std::abs(exact)) < 1e-10);
 				}
 			}
 		}
