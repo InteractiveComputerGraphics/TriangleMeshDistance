@@ -125,6 +125,7 @@ namespace tmd
 		std::vector<Vec3d> pseudonormals_vertices;
 		BoundingSphere root_bv;
 		bool is_constructed = false;
+		bool is_manifold = false;
 
 		/* Private methods */
 		void _construct();
@@ -175,6 +176,13 @@ namespace tmd
 		*/
 		template<typename IndexableVector3double, typename IndexableVector3int>
 		void construct(const std::vector<IndexableVector3double>& vertices, const std::vector<IndexableVector3int>& triangles);
+
+		/**
+		 * @brief Returns the result of the manifold check done at construction time.
+		 *
+		 * @return True if the mesh is watertight, with all edges being shared by exactly two triangles, false otherwise.
+		*/
+		bool is_mesh_manifold() const;
 
 		/**
 		 * @brief Computes the unsigned distance from a point to the triangle mesh. Thread safe.
@@ -251,6 +259,11 @@ inline void tmd::TriangleMeshDistance::construct(const std::vector<IndexableVect
 		this->triangles[i][2] = (int)triangles[i][2];
 	}
 	this->_construct();
+}
+
+inline bool tmd::TriangleMeshDistance::is_mesh_manifold() const
+{
+	return this->is_manifold;
 }
 
 inline tmd::Result tmd::TriangleMeshDistance::signed_distance(const std::array<double, 3>& point) const
@@ -412,21 +425,11 @@ inline void tmd::TriangleMeshDistance::_construct()
 	}
 
 	// Check that the mesh is watertight: All edges appear exactly twice.
-	bool single_edge_found = false;
-	bool triple_edge_found = false;
+	this->is_manifold = true;
 	for (const auto edge_count : edges_count) {
-		if (edge_count.second == 1) {
-			single_edge_found = true;
+		if (edge_count.second != 2) {
+			this->is_manifold = false;
 		}
-		else if (edge_count.second > 2) {
-			triple_edge_found = true;
-		}
-	}
-	if (single_edge_found) {
-		std::cout << "DistanceTriangleMesh warning: mesh is not watertight. At least one edge found belonging to just one triangle." << std::endl;
-	}
-	if (triple_edge_found) {
-		std::cout << "DistanceTriangleMesh warning: mesh is not watertight. At least one edge found belonging to more than two triangle." << std::endl;
 	}
 
 	this->is_constructed = true;
