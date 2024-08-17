@@ -485,7 +485,7 @@ inline void tmd::TriangleMeshDistance::_build_tree(const int node_id, BoundingSp
 		bounding_sphere.center = center;
 		bounding_sphere.radius = std::sqrt(radius_sq);
 
-		// Sort the triangles according to their center along the split dimension
+		// Sort the triangles along the split dimension
 		std::sort(triangles.begin() + begin, triangles.begin() + end,
 			[split_dim](const Triangle& a, const Triangle& b)
 			{
